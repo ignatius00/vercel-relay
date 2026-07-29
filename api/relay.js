@@ -12,10 +12,16 @@ export default async function handler(req) {
   }
 
   const url = new URL(req.url);
-
-  // Clean target base and pathname to prevent double slashes or trailing slash 404s
+  
+  // Strip trailing slashes from target Base
   const cleanBase = targetBase.replace(/\/+$/, "");
-  const cleanPath = url.pathname === "/" ? "" : url.pathname;
+  
+  // If targetBase already ends with /v1 and pathname starts with /v1, strip duplicate /v1
+  let cleanPath = url.pathname === "/" ? "" : url.pathname;
+  if (cleanBase.endsWith("/v1") && cleanPath.startsWith("/v1/")) {
+    cleanPath = cleanPath.substring(3);
+  }
+
   const destinationUrl = `${cleanBase}${cleanPath}${url.search}`;
 
   const headers = new Headers(req.headers);
