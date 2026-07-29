@@ -13,33 +13,42 @@ export default async function handler(req) {
 
   // Parse raw target URL string cleanly
   let rawTarget = targetBase.trim();
-  
-  // Strip trailing slashes
   while (rawTarget.endsWith("/")) {
     rawTarget = rawTarget.slice(0, -1);
   }
 
-  const reqUrl = new URL(req.url);
-  let extraPath = reqUrl.pathname;
-  if (extraPath === "/") {
-    extraPath = "";
+  // Use URL object constructor to strictly manipulate origin + path
+  const targetObj = new URL(rawTarget);
+  const reqObj = new URL(req.url);
+
+  let path = targetObj.pathname;
+  if (path === "/") {
+    path = "";
   }
 
-  // If target URL already contains full endpoint path (e.g. /v1/chat/completions), don't append extra pathname
-  if (rawTarget.includes("/chat/completions") || rawTarget.includes("/messages")) {
-    extraPath = "";
-  } else if (rawTarget.endsWith("/v1") && extraPath.startsWith("/v1/")) {
-    extraPath = extraPath.substring(3);
+  let reqPath = reqObj.pathname;
+  if (reqPath === "/") {
+    reqPath = "";
   }
 
-  const finalUrl = rawTarget + extraPath + reqUrl.search;
+  // Combine paths
+  let combinedPath = path;
+  if (reqPath) {
+    if (path.endsWith("/v1") && reqPath.startsWith("/v1/")) {
+      combinedPath = path + reqPath.substring(3);
+    } else if (!path.includes("/chat/completions") && !path.includes("/messages")) {
+      combinedPath = path + reqPath;
+    }
+  }
+
+  const finalDestination = `${targetObj.origin}${combinedPath}${reqObj.search}`;
 
   const headers = new Headers(req.headers);
   headers.delete("x-relay-target");
   headers.delete("host");
 
   try {
-    return await fetch(finalUrl, {
+    return await fetch(finalDestination, {
       method: req.method,
       headers: headers,
       body: req.method !== "GET" && req.method !== "HEAD" ? req.body : null,
