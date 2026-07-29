@@ -11,25 +11,31 @@ export default async function handler(req) {
     });
   }
 
-  const url = new URL(req.url);
-  
-  // Strip trailing slashes from target Base
-  const cleanBase = targetBase.replace(/\/+$/, "");
-  
-  // If targetBase already ends with /v1 and pathname starts with /v1, strip duplicate /v1
-  let cleanPath = url.pathname === "/" ? "" : url.pathname;
-  if (cleanBase.endsWith("/v1") && cleanPath.startsWith("/v1/")) {
-    cleanPath = cleanPath.substring(3);
+  const targetUrl = new URL(targetBase);
+  const reqUrl = new URL(req.url);
+
+  // If incoming path is not root and target doesn't already specify a path, append incoming path
+  let finalPath = targetUrl.pathname;
+  if (reqUrl.pathname !== "/" && reqUrl.pathname !== "") {
+    if (finalPath.endsWith("/")) {
+      finalPath = finalPath.slice(0, -1);
+    }
+    if (finalPath.endsWith("/v1") && reqUrl.pathname.startsWith("/v1")) {
+      finalPath = finalPath + reqUrl.pathname.substring(3);
+    } else {
+      finalPath = finalPath + reqUrl.pathname;
+    }
   }
 
-  const destinationUrl = `${cleanBase}${cleanPath}${url.search}`;
+  targetUrl.pathname = finalPath;
+  targetUrl.search = reqUrl.search;
 
   const headers = new Headers(req.headers);
   headers.delete("x-relay-target");
   headers.delete("host");
 
   try {
-    return await fetch(destinationUrl, {
+    return await fetch(targetUrl.toString(), {
       method: req.method,
       headers: headers,
       body: req.method !== "GET" && req.method !== "HEAD" ? req.body : null,
