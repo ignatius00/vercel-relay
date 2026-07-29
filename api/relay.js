@@ -32,11 +32,14 @@ export default async function handler(req) {
   }
   finalUrl += reqObj.search;
 
-  const targetParsed = new URL(finalUrl);
-
-  const headers = new Headers(req.headers);
-  headers.delete("x-relay-target");
-  headers.set("Host", targetParsed.host);
+  // Filter headers: strip host and x-relay-target
+  const headers = new Headers();
+  for (const [key, value] of req.headers.entries()) {
+    const k = key.toLowerCase();
+    if (k !== "host" && k !== "x-relay-target" && !k.startsWith("x-vercel-")) {
+      headers.set(key, value);
+    }
+  }
 
   try {
     return await fetch(finalUrl, {
