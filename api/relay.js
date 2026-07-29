@@ -1,7 +1,3 @@
-export const config = {
-  runtime: 'edge',
-};
-
 export default async function handler(req) {
   const targetBase = req.headers.get("x-relay-target");
   if (!targetBase) {
