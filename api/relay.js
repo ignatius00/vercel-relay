@@ -32,9 +32,11 @@ export default async function handler(req) {
   }
   finalUrl += reqObj.search;
 
+  const targetParsed = new URL(finalUrl);
+
   const headers = new Headers(req.headers);
   headers.delete("x-relay-target");
-  headers.delete("host");
+  headers.set("Host", targetParsed.host);
 
   try {
     return await fetch(finalUrl, {
