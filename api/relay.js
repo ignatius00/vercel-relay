@@ -32,20 +32,24 @@ export default async function handler(req) {
   }
   finalUrl += reqObj.search;
 
-  // Filter headers: strip host and x-relay-target
-  const headers = new Headers();
-  for (const [key, value] of req.headers.entries()) {
-    const k = key.toLowerCase();
-    if (k !== "host" && k !== "x-relay-target" && !k.startsWith("x-vercel-")) {
-      headers.set(key, value);
-    }
-  }
+  const headers = new Headers(req.headers);
+  headers.delete("x-relay-target");
+  headers.delete("host");
 
   try {
-    return await fetch(finalUrl, {
+    const upstreamRes = await fetch(finalUrl, {
       method: req.method,
       headers: headers,
       body: req.method !== "GET" && req.method !== "HEAD" ? req.body : null,
+    });
+
+    const resHeaders = new Headers(upstreamRes.headers);
+    resHeaders.set("X-Relay-Target-Used", finalUrl);
+
+    return new Response(upstreamRes.body, {
+      status: upstreamRes.status,
+      statusText: upstreamRes.statusText,
+      headers: resHeaders,
     });
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
